@@ -1,15 +1,21 @@
+import os
+from glob import glob
 from setuptools import setup
 
 package_name = 'amr-team-abs'
-module_name = 'amr_team_abs' # The inner folder with underscores
+module_name = 'amr_team_abs'
 
 setup(
     name=package_name,
     version='0.0.0',
-    packages=[module_name], # Point to the inner folder
+    packages=[module_name],
     data_files=[
         ('share/ament_index/resource_index/packages', ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        # Tell colcon to install your launch files!
+        (os.path.join('share', package_name, 'launch'), glob('launch/*.py')),
+        # Tell colcon to install your map files!
+        (os.path.join('share', package_name, 'maps'), glob('maps/*')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -20,8 +26,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            # format: 'executable_name = module_folder.script_name:main'
             'potential_field_planner = amr_team_abs.potential_field_planner:main',
+            'a_star_planner = amr_team_abs.a_star_planner:main',
         ],
     },
 )

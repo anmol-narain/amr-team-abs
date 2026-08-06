@@ -36,14 +36,14 @@ class PotentialFieldPlanner(Node):
 
         # Velocity limits
         self.max_linear = 0.3  # Reduced slightly for physical safety
-        self.max_angular = 1.0
+        self.max_angular = 0.3
 
-        self.goal_threshold = 0.3
+        self.goal_threshold = 0.2
 
         # Low-Pass Filter parameters
         self.prev_v = 0.0
         self.prev_w = 0.0
-        self.alpha = 0.3
+        self.alpha = 0.6
 
         self.get_logger().info("Potential Field Planner Started (Waiting for A* Path)")
 
@@ -66,7 +66,7 @@ class PotentialFieldPlanner(Node):
 
         try:
             # Live TF Lookup
-            transform = self.tf_buffer.lookup_transform("odom", "base_link", rclpy.time.Time())
+            transform = self.tf_buffer.lookup_transform("map", "base_link", rclpy.time.Time())
         except Exception as e:
             self.get_logger().warn(f"TF Lookup Failed: {str(e)}")
             self.cmd_pub.publish(Twist())

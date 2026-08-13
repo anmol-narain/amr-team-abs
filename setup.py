@@ -28,6 +28,8 @@ setup(
         'console_scripts': [
             'potential_field_planner = amr_team_abs.potential_field_planner:main',
             'a_star_planner = amr_team_abs.a_star_planner:main',
+            'particle_filter = amr_team_abs.particle_filter:main',
+            'map_publisher = amr_team_abs.map_publisher:main',
         ],
     },
 )

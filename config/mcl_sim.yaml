@@ -1,0 +1,51 @@
+particle_filter:
+  ros__parameters:
+    use_sim_time: true
+
+    global_frame: "map"
+    odom_frame: "odom"
+    base_frame: "base_link"
+    map_topic: "/map"
+    scan_topic: "/scan"
+
+    num_particles: 500
+    use_kld_sampling: false
+    min_particles: 200
+    max_particles: 2000
+    kld_epsilon: 0.05
+    kld_z: 2.33
+    kld_bin_xy: 0.5
+    kld_bin_theta: 0.26
+
+    motion_model: "omni"
+    omni_alpha_trans_trans: 0.15
+    omni_alpha_trans_rot: 0.05
+    omni_alpha_rot_trans: 0.05
+    omni_alpha_rot_rot: 0.15
+    alpha1: 0.2
+    alpha2: 0.2
+    alpha3: 0.2
+    alpha4: 0.2
+
+    max_beams: 60
+    z_hit: 0.85
+    z_rand: 0.15
+    sigma_hit: 0.20
+    likelihood_max_dist: 2.0
+    weight_softening: 0.3
+    laser_max_range: 8.0
+    laser_min_range: 0.10
+
+    update_min_d: 0.20
+    update_min_a: 0.20
+    resample_neff_ratio: 0.5
+
+    global_localisation: false
+    initial_pose_x: 3.0
+    initial_pose_y: -1.5
+    initial_pose_yaw: 0.0
+    initial_cov_xy: 0.5
+    initial_cov_yaw: 0.3
+
+    tf_publish_rate: 20.0
+    transform_tolerance: 0.2

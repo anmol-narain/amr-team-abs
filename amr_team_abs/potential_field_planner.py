@@ -82,11 +82,34 @@ class PotentialFieldPlanner(Node):
         # ==================================================
         # The Glue: Waypoint Management
         # ==================================================
+        # target_x, target_y = self.waypoints[self.current_goal_idx]
+        # dx = target_x - robot_x
+        # dy = target_y - robot_y
+        # dist_to_target = math.sqrt(dx**2 + dy**2)
+
+        # if dist_to_target < self.goal_threshold:
+        #     self.current_goal_idx += 1
+        #     if self.current_goal_idx >= len(self.waypoints):
+        #         self.get_logger().info("Final Destination Reached!")
+        #         self.cmd_pub.publish(Twist())
+        #         self.waypoints = []
+        #         return
+        #     else:
+        #         self.get_logger().info(f"Waypoint reached. Moving to waypoint {self.current_goal_idx}")
+        #         target_x, target_y = self.waypoints[self.current_goal_idx]
+        #         dx = target_x - robot_x
+        #         dy = target_y - robot_y
+        #         dist_to_target = math.sqrt(dx**2 + dy**2)
+        #
+        # ==================================================
+        # The Glue: Smart Waypoint Management (Line-of-Sight)
+        # ==================================================
         target_x, target_y = self.waypoints[self.current_goal_idx]
         dx = target_x - robot_x
         dy = target_y - robot_y
         dist_to_target = math.sqrt(dx**2 + dy**2)
 
+        # Condition 1: We physically reached the waypoint
         if dist_to_target < self.goal_threshold:
             self.current_goal_idx += 1
             if self.current_goal_idx >= len(self.waypoints):
@@ -95,11 +118,26 @@ class PotentialFieldPlanner(Node):
                 self.waypoints = []
                 return
             else:
-                self.get_logger().info(f"Waypoint reached. Moving to waypoint {self.current_goal_idx}")
-                target_x, target_y = self.waypoints[self.current_goal_idx]
-                dx = target_x - robot_x
-                dy = target_y - robot_y
-                dist_to_target = math.sqrt(dx**2 + dy**2)
+                self.get_logger().info(f"Waypoint reached. Moving to {self.current_goal_idx}")
+
+        # Condition 2: Waypoint Starvation Recovery (Skip blocked waypoints)
+        elif self.current_goal_idx + 1 < len(self.waypoints):
+            # Check the distance to the NEXT waypoint
+            next_x, next_y = self.waypoints[self.current_goal_idx + 1]
+            next_dx = next_x - robot_x
+            next_dy = next_y - robot_y
+            dist_to_next = math.sqrt(next_dx**2 + next_dy**2)
+
+            # If the next waypoint is closer than our current target,
+            # we have likely been pushed past the current target by an obstacle. Skip it!
+            if dist_to_next < dist_to_target:
+                self.get_logger().info(f"Waypoint {self.current_goal_idx} blocked/Missed. Skipping to {self.current_goal_idx + 1}!")
+                self.current_goal_idx += 1
+
+        target_x, target_y = self.waypoints[self.current_goal_idx]
+        dx = target_x - robot_x
+        dy = target_y - robot_y
+        dist_to_target = math.sqrt(dx**2 + dy**2)
 
         # ==================================================
         # Attractive force

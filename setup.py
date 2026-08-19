@@ -25,9 +25,10 @@ setup(
     license='TODO',
     tests_require=['pytest'],
     entry_points={
-        'console_scripts': [
-            'potential_field_planner = amr_team_abs.potential_field_planner:main',
-            'a_star_planner = amr_team_abs.a_star_planner:main',
-        ],
-    },
+    'console_scripts': [
+        'potential_field_planner = amr_team_abs.potential_field_planner:main',
+        'a_star_planner = amr_team_abs.a_star_planner:main',
+        'exploration_node = amr_team_abs.exploration:main',
+     ],
+  },
 )

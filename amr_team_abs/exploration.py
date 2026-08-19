@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import rclpy
+import tf2_ros
 from rclpy.node import Node
 from nav_msgs.msg import OccupancyGrid
 
@@ -10,10 +11,8 @@ def find_frontiers(grid, width, height):
 
     for row in range(1, height - 1):
         for col in range(1, width - 1):
-
             index = row * width + col
 
-            # Frontier must be a free cell
             if grid[index] != 0:
                 continue
 
@@ -29,12 +28,22 @@ def find_frontiers(grid, width, height):
                     neighbour_row * width + neighbour_col
                 )
 
-                # Unknown cell next to free cell = frontier
                 if grid[neighbour_index] == -1:
                     frontiers.append((row, col))
                     break
 
     return frontiers
+
+
+def grid_to_world(row, col, info):
+    resolution = info.resolution
+    origin_x = info.origin.position.x
+    origin_y = info.origin.position.y
+
+    x = origin_x + (col + 0.5) * resolution
+    y = origin_y + (row + 0.5) * resolution
+
+    return x, y
 
 
 class ExplorationNode(Node):
@@ -47,6 +56,12 @@ class ExplorationNode(Node):
             "/map",
             self.map_callback,
             10
+        )
+
+        self.tf_buffer = tf2_ros.Buffer()
+        self.tf_listener = tf2_ros.TransformListener(
+            self.tf_buffer,
+            self
         )
 
         self.map_received = False
@@ -67,6 +82,56 @@ class ExplorationNode(Node):
             width,
             height
         )
+
+        try:
+            transform = self.tf_buffer.lookup_transform(
+                "map",
+                "base_link",
+                rclpy.time.Time()
+            )
+
+            robot_x = transform.transform.translation.x
+            robot_y = transform.transform.translation.y
+
+        except Exception as e:
+            self.get_logger().warn(
+                f"Could not get robot position: {e}"
+            )
+            return
+
+        self.get_logger().info(
+            f"Robot position: x={robot_x:.2f}, y={robot_y:.2f}"
+        )
+
+        if frontiers:
+            closest_frontier = None
+            closest_distance = float("inf")
+
+            for row, col in frontiers:
+                frontier_x, frontier_y = grid_to_world(
+                    row,
+                    col,
+                    msg.info
+                )
+
+                distance = (
+                    (frontier_x - robot_x) ** 2
+                    + (frontier_y - robot_y) ** 2
+                ) ** 0.5
+
+                if distance < closest_distance:
+                    closest_distance = distance
+                    closest_frontier = (
+                        frontier_x,
+                        frontier_y
+                    )
+
+            self.get_logger().info(
+                f"Closest frontier: "
+                f"x={closest_frontier[0]:.2f}, "
+                f"y={closest_frontier[1]:.2f}, "
+                f"distance={closest_distance:.2f} m"
+            )
 
         self.get_logger().info(
             f"Map received: {width} x {height}, "

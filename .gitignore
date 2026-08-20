@@ -1,6 +1,29 @@
+# ROS2 / colcon build artefacts - never commit these
 build/
 install/
 log/
-__pycache__/
-*.pyc
 
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS
+.DS_Store
+
+# RViz autosave (commit config/task1.rviz deliberately, not this)
+.rviz2/
+
+# Large recordings - keep these out of git, link them in the report
+*.bag
+*.db3
+*.mcap
+*.mp4
+*.mkv

@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
 import rclpy
+import rclpy.duration
 import tf2_ros
+from geometry_msgs.msg import PoseStamped
 from rclpy.node import Node
 from nav_msgs.msg import OccupancyGrid
-
+from rclpy.qos import QoSProfile, DurabilityPolicy
 
 def find_frontiers(grid, width, height):
     frontiers = []
@@ -50,11 +52,21 @@ class ExplorationNode(Node):
 
     def __init__(self):
         super().__init__("exploration_node")
+        qos_profile = QoSProfile(
+            depth=1,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL
+        )
 
         self.map_sub = self.create_subscription(
             OccupancyGrid,
             "/map",
             self.map_callback,
+            qos_profile
+        )
+        
+        self.goal_pub = self.create_publisher(
+            PoseStamped,
+            "/goal_pose",
             10
         )
 
@@ -65,6 +77,13 @@ class ExplorationNode(Node):
         )
 
         self.map_received = False
+        self.latest_map = None
+        self.processed_map = False
+
+        self.timer = self.create_timer(
+            1.0,
+            self.process_map
+        )
 
         self.get_logger().info(
             "Exploration node started. Waiting for map..."
@@ -73,15 +92,30 @@ class ExplorationNode(Node):
     def map_callback(self, msg):
         self.map_received = True
 
-        width = msg.info.width
-        height = msg.info.height
-        grid = list(msg.data)
+        self.latest_map = msg
+        self.processed_map = False
 
-        frontiers = find_frontiers(
-            grid,
-            width,
-            height
-        )
+        self.get_logger().info(
+            "Map received and stored. Waiting for TF..."
+      )
+
+    def process_map(self):
+        if not self.map_received or self.latest_map is None:
+            return
+
+        if self.processed_map:
+            return
+
+        if not self.tf_buffer.can_transform(
+            "map",
+            "base_link",
+            rclpy.time.Time(),
+            timeout=rclpy.duration.Duration(seconds=2.0)
+        ):
+            self.get_logger().warn(
+                "TF not ready yet. Waiting..."
+            )
+            return
 
         try:
             transform = self.tf_buffer.lookup_transform(
@@ -99,49 +133,72 @@ class ExplorationNode(Node):
             )
             return
 
+        msg = self.latest_map
+
+        width = msg.info.width
+        height = msg.info.height
+        grid = list(msg.data)
+
+        frontiers = find_frontiers(
+            grid,
+            width,
+            height
+        )
+
         self.get_logger().info(
             f"Robot position: x={robot_x:.2f}, y={robot_y:.2f}"
         )
 
-        if frontiers:
-            closest_frontier = None
-            closest_distance = float("inf")
+        if not frontiers:
+            self.get_logger().warn(
+                "No frontiers found."
+            )
+            self.processed_map = True
+            return
 
-            for row, col in frontiers:
-                frontier_x, frontier_y = grid_to_world(
-                    row,
-                    col,
-                    msg.info
-                )
+        closest_frontier = None
+        closest_distance = float("inf")
 
-                distance = (
-                    (frontier_x - robot_x) ** 2
-                    + (frontier_y - robot_y) ** 2
-                ) ** 0.5
-
-                if distance < closest_distance:
-                    closest_distance = distance
-                    closest_frontier = (
-                        frontier_x,
-                        frontier_y
-                    )
-
-            self.get_logger().info(
-                f"Closest frontier: "
-                f"x={closest_frontier[0]:.2f}, "
-                f"y={closest_frontier[1]:.2f}, "
-                f"distance={closest_distance:.2f} m"
+        for row, col in frontiers:
+            frontier_x, frontier_y = grid_to_world(
+                row,
+                col,
+                msg.info
             )
 
-        self.get_logger().info(
-            f"Map received: {width} x {height}, "
-            f"resolution={msg.info.resolution}"
-        )
+            distance = (
+                (frontier_x - robot_x) ** 2
+                + (frontier_y - robot_y) ** 2
+            ) ** 0.5
+
+            if distance < closest_distance:
+                closest_distance = distance
+                closest_frontier = (
+                    frontier_x,
+                    frontier_y
+                )
+
+        goal = PoseStamped()
+        goal.header.frame_id = "map"
+        goal.header.stamp = self.get_clock().now().to_msg()
+
+        goal.pose.position.x = closest_frontier[0]
+        goal.pose.position.y = closest_frontier[1]
+        goal.pose.position.z = 0.0
+
+        goal.pose.orientation.x = 0.0
+        goal.pose.orientation.y = 0.0
+        goal.pose.orientation.z = 0.0
+        goal.pose.orientation.w = 1.0
+
+        self.goal_pub.publish(goal)
 
         self.get_logger().info(
-            f"Frontier cells detected: {len(frontiers)}"
+            f"Goal published: x={closest_frontier[0]:.2f}, "
+            f"y={closest_frontier[1]:.2f}"
         )
 
+        self.processed_map = True
 
 def main(args=None):
     rclpy.init(args=args)

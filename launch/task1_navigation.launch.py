@@ -8,7 +8,7 @@ from ament_index_python.packages import get_package_share_directory
 def generate_launch_description():
 
     # --- File Paths ---
-    map_path = '/home/anmol/ros2_amr/src/amr-team-abs/maps/my_lab_map5new.yaml'
+    map_path = '/home/shivam/ros2_ws/src/amr-team-abs/maps/my_lab_map5new.yaml'
 
     # Using os.path.expanduser to safely resolve the "~/.rviz2" hidden folder
     rviz_config_path = os.path.expanduser('~/.rviz2/task1.rviz')

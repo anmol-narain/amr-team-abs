@@ -30,8 +30,8 @@ class PotentialFieldPlanner(Node):
         self.current_goal_idx = 0
 
         # Potential field parameters
-        self.k_att = 1.0
-        self.k_rep = 0.25
+        self.k_att = 1.5
+        self.k_rep = 0.35
         self.rho_0 = 1.0
 
         # Velocity limits
